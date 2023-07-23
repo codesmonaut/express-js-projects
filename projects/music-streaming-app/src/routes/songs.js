@@ -5,6 +5,8 @@ const multer = require(`multer`);
 
 const Song = require(`../models/Song`);
 const trwErr = require(`../utils/trwErr`);
+const protect = require(`../middlewares/protect`);
+const restrict = require(`../middlewares/restrict`);
 
 
 
@@ -24,6 +26,9 @@ const upload = multer({ storage: storage });
 
 // ROUTER CONFIG
 const router = express.Router();
+
+// ROUTE PROTECTION MIDDLEWARE
+router.use(protect);
 
 // Get all songs
 router.get(`/`, async (req, res) => {
@@ -65,7 +70,7 @@ router.get(`/:id`, async (req, res) => {
 })
 
 // Create song
-router.post(`/`, upload.single('song'), async (req, res) => {
+router.post(`/`, restrict, upload.single('song'), async (req, res) => {
 
     try {
 
@@ -91,7 +96,7 @@ router.post(`/`, upload.single('song'), async (req, res) => {
 })
 
 // Update song
-router.patch(`/:id`, async (req, res) => {
+router.patch(`/:id`, restrict, async (req, res) => {
 
     try {
 
@@ -119,7 +124,7 @@ router.patch(`/:id`, async (req, res) => {
 })
 
 // Delete song
-router.delete(`/:id`, async (req, res) => {
+router.delete(`/:id`, restrict, async (req, res) => {
 
     try {
 
