@@ -1,9 +1,22 @@
 const crypto = require(`crypto`);
 const express = require(`express`);
 const jwt = require(`jsonwebtoken`);
+const rateLimit = require(`express-rate-limit`);
 
 const User = require(`../models/User`);
 const trwErr = require(`../utils/trwErr`);
+const protect = require(`../middlewares/protect`);
+
+
+
+// RATE LIMIT CONFIG
+const loginLimit = {
+    windowMs: 1000 * 60 * 60,
+    max: 3,
+    message: 'Too many login attempts from same IP. Try again in an hour.'
+}
+
+
 
 // ROUTER CONFIG
 const router = express.Router();
@@ -49,7 +62,7 @@ router.post(`/register`, async (req, res) => {
 })
 
 // Login
-router.post(`/login`, async (req, res) => {
+router.post(`/login`, rateLimit(loginLimit), async (req, res) => {
 
     try {
 
@@ -121,10 +134,8 @@ router.post(`/forgotPassword`, async (req, res) => {
             return trwErr(res, 400, 'Email is incorrect or such user does not exist.');
         }
 
-        const resetTokenSecretKey = process.env.RESET_TOKEN_SECRET_KEY;
-        const resetTokenSecretKeyEncrypted = crypto.createHash(`sha256`).update(resetTokenSecretKey).digest(`hex`);
-
-        const resetToken = jwt.sign({ id: user._id }, resetTokenSecretKeyEncrypted, {
+        const resetToken = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET_KEY, {
+            algorithm: process.env.RESET_TOKEN_ALGORITHM,
             expiresIn: process.env.RESET_TOKEN_EXPIRE_DATE
         })
 
@@ -153,10 +164,7 @@ router.post(`/resetPassword/:token`, async (req, res) => {
             return trwErr(res, 401, 'The token must have expired.');
         }
 
-        const resetTokenSecretKey = process.env.RESET_TOKEN_SECRET_KEY;
-        const resetTokenSecretKeyEncrypted = crypto.createHash(`sha256`).update(resetTokenSecretKey).digest(`hex`);
-
-        const decoded = jwt.verify(resetToken, resetTokenSecretKeyEncrypted);
+        const decoded = jwt.verify(resetToken, process.env.RESET_TOKEN_SECRET_KEY);
 
         const user = await User.findById(decoded.id);
 
@@ -175,6 +183,42 @@ router.post(`/resetPassword/:token`, async (req, res) => {
             maxAge: 1000 * 60 * 60 * process.env.ACCESS_TOKEN_COOKIE_EXPIRE_DATE,
             httpOnly: true
         })
+
+        user.password = undefined;
+
+        res.status(200).json({
+            status: 200,
+            data: {
+                user: user
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Change password
+router.post(`/changePassword`, protect, async (req, res) => {
+
+    try {
+
+        const oldPassword = req.body.oldPassword;
+
+        const user = await User.findById(req.currentUserId);
+
+        const match = await User.comparePasswords(oldPassword, user.password);
+
+        if (!match) {
+            return trwErr(res, 401, 'Please provide the correct old password.');
+        }
+
+        if (req.body.password !== req.body.confirmPassword) {
+            return trwErr(res, 400, 'Password and confirm password must match.');
+        }
+
+        user.password = req.body.password;
+        await user.save();
 
         user.password = undefined;
 
