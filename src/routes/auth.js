@@ -154,7 +154,7 @@ router.post(`/forgotPassword`, async (req, res) => {
 })
 
 // Reset password
-router.post(`/resetPassword/:token`, async (req, res) => {
+router.patch(`/resetPassword/:token`, async (req, res) => {
     
     try {
 
@@ -199,13 +199,13 @@ router.post(`/resetPassword/:token`, async (req, res) => {
 })
 
 // Change password
-router.post(`/changePassword`, protect, async (req, res) => {
+router.patch(`/changePassword`, protect, async (req, res) => {
 
     try {
 
-        const oldPassword = req.body.oldPassword;
-
         const user = await User.findById(req.currentUserId);
+        
+        const oldPassword = req.body.oldPassword;
 
         const match = await User.comparePasswords(oldPassword, user.password);
 
