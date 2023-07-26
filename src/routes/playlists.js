@@ -2,6 +2,7 @@ const express = require(`express`);
 
 const Playlist = require(`../models/Playlist`);
 const User = require(`../models/User`);
+const Song = require(`../models/Song`);
 const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
 
@@ -60,7 +61,8 @@ router.post(`/`, async (req, res) => {
         const filteredObj = {
             userId: user._id,
             name: req.body.name,
-            author: user.username
+            author: user.username,
+            isPrivate: req.body.isPrivate
         }
 
         const newPlaylist = await Playlist.create(filteredObj);
@@ -123,6 +125,69 @@ router.delete(`/:id`, async (req, res) => {
 
         user.playlists -= 1;
         await user.save();
+
+        res.status(204).json(null);
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Add song
+router.patch(`/addSong/:id`, async (req, res) => {
+
+    try {
+
+        const playlist = await Playlist.findById(req.params.id);
+        const user = await User.findById(req.currentUserId);
+        const song = await Song.findById(req.body.songId);
+
+        if (playlist.userId.valueOf() !== user._id.valueOf()) {
+            return trwErr(res, 400, 'You can add song only to your playlist.');
+        }
+
+        if (playlist.songs.includes(song._id)) {
+            return trwErr(res, 400, 'That song is already in playlist.');
+        }
+
+        await playlist.updateOne({ $push: { songs: song._id } });
+
+        playlist.songsNum += 1;
+        await playlist.save();
+
+        res.status(200).json({
+            status: 200,
+            data: {
+                playlist: playlist
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, err.message);
+    }
+})
+
+// Remove song
+router.patch(`/removeSong/:id`, async (req, res) => {
+
+    try {
+
+        const playlist = await Playlist.findById(req.params.id);
+        const user = await User.findById(req.currentUserId);
+        const song = await Song.findById(req.body.songId);
+
+        if (playlist.userId.valueOf() !== user._id.valueOf()) {
+            return trwErr(res, 401, 'You can remove song only from your playlist.');
+        }
+
+        if (!playlist.songs.includes(song._id)) {
+            return trwErr(  res, 400, 'You can remove only the song that is in the playlist.');
+        }
+
+        await playlist.updateOne({ $pull: { songs: song._id } });
+        
+        playlist.songsNum -= 1;
+        await playlist.save();
 
         res.status(204).json(null);
         
