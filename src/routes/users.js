@@ -1,3 +1,4 @@
+const fs = require(`fs`);
 const path = require(`path`);
 const express = require(`express`);
 const multer = require(`multer`);
@@ -19,7 +20,18 @@ const storage = multer.diskStorage({
     }
 })
 
-const upload = multer({ storage: storage });
+const fileFilter = (req, file, cb) => {
+
+    if (file.mimetype.startsWith('image')) {
+        cb(null, true);
+    }
+
+    if (!file.mimetype.startsWith('image')) {
+        cb(null, false);
+    }
+}
+
+const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 
 
@@ -111,6 +123,10 @@ router.patch(`/changePicture`, upload.single('picture'), async (req, res) => {
 
     try {
 
+        if (!req.file) {
+            return trwErr(res, 400, 'You can upload only images.');
+        }
+
         const account = await User.findById(req.currentUserId);
 
         account.picture = req.file.filename;
@@ -123,6 +139,30 @@ router.patch(`/changePicture`, upload.single('picture'), async (req, res) => {
                 account: account
             }
         })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Remove picture
+router.delete(`/removePicture`, async (req, res) => {
+
+    try {
+
+        const account = await User.findById(req.currentUserId);
+
+        fs.unlink(`uploads/${account.picture}`, err => {
+
+            if (err) {
+                console.log(err.message);
+            }
+        })
+
+        account.picture = 'default.png';
+        await account.save();
+
+        res.status(204).json(null);
         
     } catch (err) {
         trwErr(res, 500, 'It looks like there is an error on the server.');
