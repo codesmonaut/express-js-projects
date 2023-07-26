@@ -12,12 +12,13 @@ const router = express.Router();
 // ROUTE PROTECTION MIDDLEWARE
 router.use(protect);
 
-// Get all playlists
-router.get(`/`, async (req, res) => {
+// Get account playlists
+router.get(`/accountPlaylists`, async (req, res) => {
 
     try {
 
-        const playlists = await Playlist.find();
+        const account = await User.findById(req.currentUserId);
+        const playlists = await Playlist.find({ userId: account._id });
 
         res.status(200).json({
             status: 200,
@@ -32,12 +33,60 @@ router.get(`/`, async (req, res) => {
     }
 })
 
-// Get one playlist
+// Get account playlist
+router.get(`/accountPlaylist/:id`, async (req, res) => {
+
+    try {
+
+        const account = await User.findById(req.currentUserId);
+        const playlist = await Playlist.findById(req.params.id);
+
+        if (playlist.userId.valueOf() !== account._id.valueOf()) {
+            return trwErr(res, 401, 'On this route you can get only your playlist.');
+        }
+
+        res.status(200).json({
+            status: 200,
+            data: {
+                playlist: playlist
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, err.message);
+    }
+})
+
+// Get all users playlists
+router.get(`/`, async (req, res) => {
+
+    try {
+
+        const playlists = (await Playlist.find()).filter(el => el.isPrivate === false);
+
+        res.status(200).json({
+            status: 200,
+            results: playlists.length,
+            data: {
+                playlists: playlists
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Get one user playlist
 router.get(`/:id`, async (req, res) => {
 
     try {
 
         const playlist = await Playlist.findById(req.params.id);
+
+        if (playlist.isPrivate) {
+            return trwErr(res, 403, 'This playlist is private.')
+        }
 
         res.status(200).json({
             status: 200,
@@ -150,15 +199,18 @@ router.patch(`/addSong/:id`, async (req, res) => {
             return trwErr(res, 400, 'That song is already in playlist.');
         }
 
-        await playlist.updateOne({ $push: { songs: song._id } });
-
-        playlist.songsNum += 1;
-        await playlist.save();
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(req.params.id, {
+            $push: { songs: song._id },
+            $inc: { songsNum: 1 }
+        }, {
+            new: true,
+            runValidators: true
+        })
 
         res.status(200).json({
             status: 200,
             data: {
-                playlist: playlist
+                playlist: updatedPlaylist
             }
         })
         
@@ -184,10 +236,13 @@ router.patch(`/removeSong/:id`, async (req, res) => {
             return trwErr(  res, 400, 'You can remove only the song that is in the playlist.');
         }
 
-        await playlist.updateOne({ $pull: { songs: song._id } });
-        
-        playlist.songsNum -= 1;
-        await playlist.save();
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(req.params.id, {
+            $pull: { songs: song._id },
+            $inc: { songsNum: -1 }
+        }, {
+            new: true,
+            runValidators: true
+        })
 
         res.status(204).json(null);
         
