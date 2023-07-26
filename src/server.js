@@ -9,6 +9,7 @@ const cookieParser = require(`cookie-parser`);
 const songRouter = require(`./routes/songs`);
 const authRouter = require(`./routes/auth`);
 const userRouter = require(`./routes/users`);
+const playlistRouter = require(`./routes/playlists`);
 
 // APP CONFIG
 const app = express();
@@ -32,6 +33,7 @@ mongoose.connect(database).then(() => console.log('Connected to database.'));
 app.use(`/api/v1/songs`, songRouter);
 app.use(`/api/v1/auth`, authRouter);
 app.use(`/api/v1/users`, userRouter);
+app.use(`/api/v1/playlists`, playlistRouter);
 
 // LISTENER
 app.listen(port, () => {

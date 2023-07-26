@@ -152,7 +152,7 @@ router.delete(`/removePicture`, async (req, res) => {
 
         const account = await User.findById(req.currentUserId);
 
-        fs.unlink(`uploads/${account.picture}`, err => {
+        fs.unlink(`./uploads/${account.picture}`, err => {
 
             if (err) {
                 console.log(err.message);
