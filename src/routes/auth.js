@@ -6,17 +6,7 @@ const rateLimit = require(`express-rate-limit`);
 const User = require(`../models/User`);
 const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
-
-
-
-// RATE LIMIT CONFIG
-const loginLimit = {
-    windowMs: 1000 * 60 * 60,
-    max: 3,
-    message: 'Too many login attempts from same IP. Try again in an hour.'
-}
-
-
+const loginRateLimit = require(`../config/loginRateLimit`);
 
 // ROUTER CONFIG
 const router = express.Router();
@@ -62,7 +52,7 @@ router.post(`/register`, async (req, res) => {
 })
 
 // Login
-router.post(`/login`, rateLimit(loginLimit), async (req, res) => {
+router.post(`/login`, rateLimit(loginRateLimit), async (req, res) => {
 
     try {
 

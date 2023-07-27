@@ -5,11 +5,16 @@ const express = require(`express`);
 const mongoose = require(`mongoose`);
 const cors = require(`cors`);
 const cookieParser = require(`cookie-parser`);
+const helmet = require(`helmet`);
+const hpp = require(`hpp`);
+const rateLimit = require(`express-rate-limit`);
+const mongoSanitize = require(`express-mongo-sanitize`);
 
 const songRouter = require(`./routes/songs`);
 const authRouter = require(`./routes/auth`);
 const userRouter = require(`./routes/users`);
 const playlistRouter = require(`./routes/playlists`);
+const serverRateLimit = require(`./config/serverRateLimit`);
 
 // APP CONFIG
 const app = express();
@@ -21,6 +26,10 @@ const database = process.env.DATABASE;
 app.use(express.json({ limit: '10kb' }));
 app.use(cors());
 app.use(cookieParser());
+app.use(helmet());
+app.use(hpp());
+app.use(rateLimit(serverRateLimit));
+app.use(mongoSanitize());
 
 // STATIC FILES
 app.use(`/uploads`, express.static(path.join(`${__dirname}/uploads`)));
