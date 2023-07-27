@@ -5,6 +5,7 @@ const User = require(`../models/User`);
 const Song = require(`../models/Song`);
 const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
+const restrict = require(`../middlewares/restrict`);
 
 // ROUTER CONFIG
 const router = express.Router();
@@ -20,6 +21,10 @@ router.get(`/accountPlaylists`, async (req, res) => {
         const account = await User.findById(req.currentUserId);
         const playlists = await Playlist.find({ userId: account._id });
 
+        if (playlists.length === 0) {
+            return trwErr(res, 400, 'You need to create playlists in order to see them and user them.');
+        }
+
         res.status(200).json({
             status: 200,
             results: playlists.length,
@@ -33,7 +38,7 @@ router.get(`/accountPlaylists`, async (req, res) => {
     }
 })
 
-// Get account playlist
+// Get one account playlist
 router.get(`/accountPlaylist/:id`, async (req, res) => {
 
     try {
@@ -42,50 +47,7 @@ router.get(`/accountPlaylist/:id`, async (req, res) => {
         const playlist = await Playlist.findById(req.params.id);
 
         if (playlist.userId.valueOf() !== account._id.valueOf()) {
-            return trwErr(res, 401, 'On this route you can get only your playlist.');
-        }
-
-        res.status(200).json({
-            status: 200,
-            data: {
-                playlist: playlist
-            }
-        })
-        
-    } catch (err) {
-        trwErr(res, 500, err.message);
-    }
-})
-
-// Get all users playlists
-router.get(`/`, async (req, res) => {
-
-    try {
-
-        const playlists = (await Playlist.find()).filter(el => el.isPrivate === false);
-
-        res.status(200).json({
-            status: 200,
-            results: playlists.length,
-            data: {
-                playlists: playlists
-            }
-        })
-        
-    } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
-    }
-})
-
-// Get one user playlist
-router.get(`/:id`, async (req, res) => {
-
-    try {
-
-        const playlist = await Playlist.findById(req.params.id);
-
-        if (playlist.isPrivate) {
-            return trwErr(res, 403, 'This playlist is private.')
+            return (res, 401, 'On this route you can see only your playlist.');
         }
 
         res.status(200).json({
@@ -100,8 +62,8 @@ router.get(`/:id`, async (req, res) => {
     }
 })
 
-// Create playlist
-router.post(`/`, async (req, res) => {
+// Make new playlist
+router.post(`/makeNewPlaylist`, async (req, res) => {
     
     try {
 
@@ -131,8 +93,8 @@ router.post(`/`, async (req, res) => {
     }
 })
 
-// Update playlist
-router.patch(`/:id`, async (req, res) => {
+// Change playlist
+router.patch(`/changePlaylist/:id`, async (req, res) => {
     
     try {
 
@@ -143,13 +105,20 @@ router.patch(`/:id`, async (req, res) => {
             return trwErr(res, 401, 'You can update only your playlist.');
         }
 
-        playlist.name = req.body.name;
-        await playlist.save();
+        const filteredObj = {
+            name: req.body.name,
+            isPrivate: req.body.isPrivate
+        }
+
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(req.params.id, filteredObj, {
+            new: true,
+            runValidators: true
+        })
 
         res.status(200).json({
             status: 200,
             data: {
-                playlist: playlist
+                playlist: updatedPlaylist
             }
         })
         
@@ -158,8 +127,8 @@ router.patch(`/:id`, async (req, res) => {
     }
 })
 
-// Delete playlist
-router.delete(`/:id`, async (req, res) => {
+// Delete account playlist
+router.delete(`/deletePlaylist/:id`, async (req, res) => {
 
     try {
 
@@ -243,6 +212,118 @@ router.patch(`/removeSong/:id`, async (req, res) => {
             new: true,
             runValidators: true
         })
+
+        res.status(204).json(null);
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// ROUTE RESTRICTION MIDDLEWARE
+router.use(restrict);
+
+// Get all playlists
+router.get(`/`, async (req, res) => {
+
+    try {
+
+        const playlists = await Playlist.find();
+
+        res.status(200).json({
+            status: 200,
+            results: playlists.length,
+            data: {
+                playlists: playlists
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Get one playlist
+router.get(`/:id`, async (req, res) => {
+
+    try {
+
+        const playlist = await Playlist.findById(req.params.id);
+
+        res.status(200).json({
+            status: 200,
+            data: {
+                playlist: playlist
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Create playlist
+router.post(`/`, async (req, res) => {
+    
+    try {
+
+        const currentAdmin = await User.findById(req.currentUserId);
+        
+        const filteredObj = {
+            userId: currentAdmin._id,
+            name: req.body.name,
+            author: currentAdmin.username,
+            isPrivate: req.body.isPrivate
+        }
+
+        const newPlaylist = await Playlist.create(filteredObj);
+
+        res.status(201).json({
+            status: 201,
+            data: {
+                playlist: newPlaylist
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Update playlist
+router.patch(`/:id`, async (req, res) => {
+
+    try {
+
+        const filteredObj = {
+            name: req.body.name,
+            songs: req.body.songs,
+            isPrivate: req.body.isPrivate
+        }
+
+        const updatedPlaylist = await Playlist.findByIdAndUpdate(req.params.id, filteredObj, {
+            new: true,
+            runValidators: true
+        })
+
+        res.status(200).json({
+            status: 200,
+            data: {
+                playlist: updatedPlaylist
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Delete playlist
+router.delete(`/:id`, async (req, res) => {
+
+    try {
+
+        await Playlist.findByIdAndDelete(req.params.id);
 
         res.status(204).json(null);
         
