@@ -220,6 +220,71 @@ router.patch(`/removeSong/:id`, async (req, res) => {
     }
 })
 
+// Get user playlists
+router.get(`/userPlaylists/:id`, async (req, res) => {
+
+    try {
+
+        const account = await User.findById(req.currentUserId);
+
+        if (account._id.valueOf() === req.params.id) {
+            return res.redirect(`/api/v1/playlists/accountPlaylists`);
+        }
+
+        const user = await User.findById(req.params.id);
+        const playlists = await Playlist.find({ userId: user._id, isPrivate: false });
+
+        res.status(200).json({
+            status: 200,
+            results: playlists.length,
+            data: {
+                user: {
+                    username: user.username,
+                    picture: user.picture,
+                    playlists: user.playlists
+                },
+                playlists: playlists
+            }
+        })
+        
+    } catch (err) {
+        trwErr(res, 500, 'It looks like there is an error on the server.');
+    }
+})
+
+// Get one user playlist
+router.get(`/userPlaylist/:id`, async (req, res) => {
+
+    try {
+
+        const account = await User.findById(req.currentUserId);
+        const playlist = await Playlist.findById(req.params.id);
+        const user = await User.findById(playlist.userId);
+
+        if (account._id.valueOf() === user._id.valueOf()) {
+            return res.redirect(`/api/v1/playlists/accountPlaylist/${req.params.id}`);
+        }
+
+        if (playlist.isPrivate) {
+            return trwErr(res, 401, 'This playlist is private.');
+        }
+
+        res.status(200).json({
+            status: 200,
+            data: {
+                user: {
+                    username: user.username,
+                    picture: user.picture
+                },
+                playlist: playlist
+            }
+        })
+        
+    } catch (err) {
+        
+    }
+})
+
 // ROUTE RESTRICTION MIDDLEWARE
 router.use(restrict);
 
