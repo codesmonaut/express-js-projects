@@ -23,7 +23,7 @@ const handleErr = (res, err) => {
     }
 
     res.status(error.statusCode || 500).json({
-        status: error.statusCode,
+        status: error.statusCode || 500,
         error: error.message || 'It looks like there is an error on the server.'
     })
 }
