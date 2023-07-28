@@ -4,9 +4,10 @@ const jwt = require(`jsonwebtoken`);
 const rateLimit = require(`express-rate-limit`);
 
 const User = require(`../models/User`);
-const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
 const loginRateLimit = require(`../config/loginRateLimit`);
+const ErrorResponse = require(`../utils/ErrorResponse`);
+const handleErr = require(`../utils/handleErr`);
 
 // ROUTER CONFIG
 const router = express.Router();
@@ -17,7 +18,7 @@ router.post(`/register`, async (req, res) => {
     try {
 
         if (req.body.password !== req.body.confirmPassword) {
-            return trwErr(res, 400, 'Password and confirm password must match.');
+            return handleErr(res, new ErrorResponse(400, 'Password and confirm password must match.'));
         }
 
         const filteredObj = {
@@ -47,7 +48,7 @@ router.post(`/register`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -62,13 +63,13 @@ router.post(`/login`, rateLimit(loginRateLimit), async (req, res) => {
         const currentUser = await User.findOne({ email: email });
 
         if (!currentUser) {
-            return trwErr(res, 401, 'Email or password, or both, are incorrect.');
+            return handleErr(res, new ErrorResponse(401, 'Email or password, or both, are incorrect.'));
         }
 
         const match = await User.comparePasswords(password, currentUser.password);
 
         if (!match) {
-            return trwErr(res, 401, 'Email or password, or both, are incorrect.');
+            return handleErr(res, new ErrorResponse(401, 'Email or password, or both, are incorrect.'));
         }
 
         const token = jwt.sign({ id: currentUser._id }, process.env.ACCESS_TOKEN_SECRET_KEY, {
@@ -90,7 +91,7 @@ router.post(`/login`, rateLimit(loginRateLimit), async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -107,7 +108,7 @@ router.get(`/logout`, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -121,7 +122,7 @@ router.post(`/forgotPassword`, async (req, res) => {
         const user = await User.findOne({ email: email });
 
         if (!user) {
-            return trwErr(res, 400, 'Email is incorrect or such user does not exist.');
+            return handleErr(res, new ErrorResponse(401, 'Email is incorrect or such user does not exist.'));
         }
 
         const resetToken = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET_KEY, {
@@ -139,7 +140,7 @@ router.post(`/forgotPassword`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -151,7 +152,7 @@ router.patch(`/resetPassword/:token`, async (req, res) => {
         const resetToken = req.params.token;
 
         if (!resetToken) {
-            return trwErr(res, 401, 'The token must have expired.');
+            return handleErr(res, new ErrorResponse(401, 'The token must have expired.'));
         }
 
         const decoded = jwt.verify(resetToken, process.env.RESET_TOKEN_SECRET_KEY);
@@ -159,7 +160,7 @@ router.patch(`/resetPassword/:token`, async (req, res) => {
         const user = await User.findById(decoded.id);
 
         if (req.body.password !== req.body.confirmPassword) {
-            return trwErr(res, 400, 'Password and confirm password must match.');
+            return handleErr(res, new ErrorResponse(400, 'Password and confirm password must match.'));
         }
 
         user.password = req.body.password;
@@ -184,7 +185,7 @@ router.patch(`/resetPassword/:token`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -200,11 +201,11 @@ router.patch(`/changePassword`, protect, async (req, res) => {
         const match = await User.comparePasswords(oldPassword, user.password);
 
         if (!match) {
-            return trwErr(res, 401, 'Please provide the correct old password.');
+            return handleErr(res, new ErrorResponse(401, 'Please provide the correct old password.'));
         }
 
         if (req.body.password !== req.body.confirmPassword) {
-            return trwErr(res, 400, 'Password and confirm password must match.');
+            return handleErr(res, new ErrorResponse(400, 'Password and confirm password must match.'));
         }
 
         user.password = req.body.password;
@@ -220,7 +221,7 @@ router.patch(`/changePassword`, protect, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 

@@ -1,12 +1,13 @@
 const jwt = require(`jsonwebtoken`);
 
-const trwErr = require(`../utils/trwErr`);
+const ErrorResponse = require(`../utils/ErrorResponse`);
+const handleErr = require(`../utils/handleErr`);
 
 const protect = (req, res, next) => {
     const token = req.cookies.token;
 
     if (!token) {
-        return trwErr(res, 401, 'You need to login in order to proceed.');
+        return handleErr(res, new ErrorResponse(401, 'You need to login in order to proceed.'));
     }
 
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY, (err, decoded) => {

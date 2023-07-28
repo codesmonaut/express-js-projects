@@ -3,9 +3,10 @@ const express = require(`express`);
 const Playlist = require(`../models/Playlist`);
 const User = require(`../models/User`);
 const Song = require(`../models/Song`);
-const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
 const restrict = require(`../middlewares/restrict`);
+const ErrorResponse = require(`../utils/ErrorResponse`);
+const handleErr = require("../utils/handleErr");
 
 // ROUTER CONFIG
 const router = express.Router();
@@ -22,7 +23,7 @@ router.get(`/accountPlaylists`, async (req, res) => {
         const playlists = await Playlist.find({ userId: account._id });
 
         if (playlists.length === 0) {
-            return trwErr(res, 400, 'You need to create playlists in order to see them and user them.');
+            return handleErr(res, new ErrorResponse(400, 'You need to create playlists in order to see them and user them.'));
         }
 
         res.status(200).json({
@@ -34,7 +35,7 @@ router.get(`/accountPlaylists`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -47,7 +48,7 @@ router.get(`/accountPlaylist/:id`, async (req, res) => {
         const playlist = await Playlist.findById(req.params.id);
 
         if (playlist.userId.valueOf() !== account._id.valueOf()) {
-            return (res, 401, 'On this route you can see only your playlist.');
+            return handleErr(res, new ErrorResponse(401, 'On this route you can see only your playlist.'));
         }
 
         res.status(200).json({
@@ -58,7 +59,7 @@ router.get(`/accountPlaylist/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -89,7 +90,7 @@ router.post(`/makeNewPlaylist`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -102,7 +103,7 @@ router.patch(`/changePlaylist/:id`, async (req, res) => {
         const user = await User.findById(req.currentUserId);
 
         if (playlist.userId.valueOf() !== user._id.valueOf()) {
-            return trwErr(res, 401, 'You can update only your playlist.');
+            return handleErr(res, new ErrorResponse(401, 'You can update only your playlist.'));
         }
 
         const filteredObj = {
@@ -123,7 +124,7 @@ router.patch(`/changePlaylist/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -136,7 +137,7 @@ router.delete(`/deletePlaylist/:id`, async (req, res) => {
         const user = await User.findById(req.currentUserId);
 
         if (playlist.userId.valueOf() !== user._id.valueOf()) {
-            return trwErr(res, 401, 'You can delete only your playlist.');
+            return handleErr(res, new ErrorResponse(401, 'You can delete only your playlist.'));
         }
 
         await Playlist.findByIdAndDelete(req.params.id);
@@ -147,7 +148,7 @@ router.delete(`/deletePlaylist/:id`, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -161,11 +162,11 @@ router.patch(`/addSong/:id`, async (req, res) => {
         const song = await Song.findById(req.body.songId);
 
         if (playlist.userId.valueOf() !== user._id.valueOf()) {
-            return trwErr(res, 400, 'You can add song only to your playlist.');
+            return handleErr(res, new ErrorResponse(400, 'You can add song only to your playlist.'));
         }
 
         if (playlist.songs.includes(song._id)) {
-            return trwErr(res, 400, 'That song is already in playlist.');
+            return handleErr(res, new ErrorResponse(400, 'That song is already in playlist.'));
         }
 
         const updatedPlaylist = await Playlist.findByIdAndUpdate(req.params.id, {
@@ -184,7 +185,7 @@ router.patch(`/addSong/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, err.message);
+        handleErr(res, err);
     }
 })
 
@@ -198,11 +199,11 @@ router.patch(`/removeSong/:id`, async (req, res) => {
         const song = await Song.findById(req.body.songId);
 
         if (playlist.userId.valueOf() !== user._id.valueOf()) {
-            return trwErr(res, 401, 'You can remove song only from your playlist.');
+            return handleErr(res, new ErrorResponse(401, 'You can remove song only from your playlist.'));
         }
 
         if (!playlist.songs.includes(song._id)) {
-            return trwErr(  res, 400, 'You can remove only the song that is in the playlist.');
+            return handleErr(res, new ErrorResponse(400, 'You can remove only the song that is in the playlist.'));
         }
 
         const updatedPlaylist = await Playlist.findByIdAndUpdate(req.params.id, {
@@ -216,7 +217,7 @@ router.patch(`/removeSong/:id`, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -248,7 +249,7 @@ router.get(`/userPlaylists/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -266,7 +267,7 @@ router.get(`/userPlaylist/:id`, async (req, res) => {
         }
 
         if (playlist.isPrivate) {
-            return trwErr(res, 401, 'This playlist is private.');
+            return handleErr(res, new ErrorResponse(401, 'This playlist is private.'));
         }
 
         res.status(200).json({
@@ -281,7 +282,7 @@ router.get(`/userPlaylist/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        
+        handleErr(res, err);
     }
 })
 
@@ -304,7 +305,7 @@ router.get(`/`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -323,7 +324,7 @@ router.get(`/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -351,7 +352,7 @@ router.post(`/`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -379,7 +380,7 @@ router.patch(`/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -393,7 +394,7 @@ router.delete(`/:id`, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 

@@ -4,9 +4,10 @@ const express = require(`express`);
 const multer = require(`multer`);
 
 const User = require(`../models/User`);
-const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
 const restrict = require(`../middlewares/restrict`);
+const ErrorResponse = require(`../utils/ErrorResponse`);
+const handleErr = require(`../utils/handleErr`);
 
 
 
@@ -58,7 +59,7 @@ router.get(`/account`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -68,11 +69,11 @@ router.patch(`/updateAccount`, async (req, res) => {
     try {
 
         if (req.body.password) {
-            return trwErr(res, 400, 'You can change password on /changePassword route.');
+            return handleErr(res, new ErrorResponse(400, 'You can change password on /changePassword route.'));
         }
 
         if (req.body.picture) {
-            return trwErr(res, 400, 'You can change picture on /changePicture route.');
+            return handleErr(res, new ErrorResponse(400, 'You can change picture on /changePicture route.'));
         }
 
         const filteredObj = {
@@ -95,7 +96,7 @@ router.patch(`/updateAccount`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -114,7 +115,7 @@ router.delete(`/deleteAccount`, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -124,7 +125,7 @@ router.patch(`/changePicture`, upload.single('picture'), async (req, res) => {
     try {
 
         if (!req.file) {
-            return trwErr(res, 400, 'You can upload only images.');
+            return handleErr(res, new ErrorResponse(400, 'You can upload only images.'));
         }
 
         const account = await User.findById(req.currentUserId);
@@ -141,7 +142,7 @@ router.patch(`/changePicture`, upload.single('picture'), async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -165,7 +166,7 @@ router.delete(`/removePicture`, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -185,7 +186,7 @@ router.get(`/`, restrict, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -204,7 +205,7 @@ router.get(`/:id`, restrict, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -233,7 +234,7 @@ router.patch(`/:id`, restrict, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -247,7 +248,7 @@ router.delete(`/:id`, restrict, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 

@@ -4,9 +4,9 @@ const express = require(`express`);
 const multer = require(`multer`);
 
 const Song = require(`../models/Song`);
-const trwErr = require(`../utils/trwErr`);
 const protect = require(`../middlewares/protect`);
 const restrict = require(`../middlewares/restrict`);
+const handleErr = require(`../utils/handleErr`);
 
 
 
@@ -46,7 +46,7 @@ router.get(`/`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -65,7 +65,7 @@ router.get(`/:id`, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -91,7 +91,7 @@ router.post(`/`, restrict, upload.single('song'), async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, 'It looks like there is an error on the server.');
+        handleErr(res, err);
     }
 })
 
@@ -119,7 +119,7 @@ router.patch(`/:id`, restrict, async (req, res) => {
         })
         
     } catch (err) {
-        trwErr(res, 500, err.message);
+        handleErr(res, err);
     }
 })
 
@@ -142,7 +142,7 @@ router.delete(`/:id`, restrict, async (req, res) => {
         res.status(204).json(null);
         
     } catch (err) {
-        trwErr(res, 500, err.message);
+        handleErr(res, err);
     }
 })
 
@@ -161,7 +161,7 @@ router.get(`/play/:id`, async (req, res) => {
         fs.createReadStream(songFilePath).pipe(res);
         
     } catch (err) {
-        trwErr(res, 500, err.message);
+        handleErr(res, err);
     }
 })
 
@@ -175,7 +175,7 @@ router.get(`/download/:id`, async (req, res) => {
         res.download(`${__dirname}/../audio/${song.file}`);
         
     } catch (err) {
-        trwErr(res, 500, err.message);
+        handleErr(res, err);
     }
 })
 

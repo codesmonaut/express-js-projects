@@ -15,6 +15,8 @@ const authRouter = require(`./routes/auth`);
 const userRouter = require(`./routes/users`);
 const playlistRouter = require(`./routes/playlists`);
 const serverRateLimit = require(`./config/serverRateLimit`);
+const ErrorResponse = require(`./utils/ErrorResponse`);
+const handleErr = require(`./utils/handleErr`);
 
 // APP CONFIG
 const app = express();
@@ -43,6 +45,9 @@ app.use(`/api/v1/songs`, songRouter);
 app.use(`/api/v1/auth`, authRouter);
 app.use(`/api/v1/users`, userRouter);
 app.use(`/api/v1/playlists`, playlistRouter);
+app.all(`*`, (req, res) => {
+    handleErr(res, new ErrorResponse(404, `Page ${req.originalUrl} not found.`));
+})
 
 // LISTENER
 app.listen(port, () => {
